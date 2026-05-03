@@ -1,0 +1,20 @@
+# Java — arquivos compilados e build
+Codigo/backend/target/
+*.class
+*.jar
+*.war
+
+# Ambiente local
+.env
+
+# Runtime
+upload-temp/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
