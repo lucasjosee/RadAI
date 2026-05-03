@@ -1,0 +1,25 @@
+cff-version: 1.0.1
+message: "If you use this software, please cite it using the following metadata."
+title: RadAI
+authors:
+  - family-names: Rodrigues
+    given-names: Lucas José Souza
+  - name-suffix: Professora
+    affiliation: PUC Minas
+    family-names: Diniz
+    given-names: Luciana Mara Freitas
+  - name-suffix: Professor
+    affiliation: PUC Minas
+    family-names: Rivero
+    given-names: Ilo Amy Saldanha
+keywords:
+  - fratura óssea
+  - raio-x
+  - inteligência artificial
+  - azure custom vision
+  - saúde
+  - diagnóstico por imagem
+repository-code: https://github.com/lucasjosee/RadAI
+license: CC-BY-4.0
+version: 1.0.0
+date-released: 2022-07-14
