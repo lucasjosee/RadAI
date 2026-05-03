@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Usuário - RadAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%); height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .card { width: 500px; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="card p-4">
+        <h3 class="text-center mb-4 text-primary">Cadastro de Equipe</h3>
+        
+        <form onsubmit="salvarUsuario(event)">
+            <div class="mb-3">
+                <label>Nome Completo</label>
+                <input type="text" id="nome" class="form-control" required>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Email</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Senha</label>
+                    <input type="password" id="senha" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Tipo de Usuário</label>
+                    <select id="tipo" class="form-select" onchange="verificarTipo()">
+                        <option value="SECRETARIA">Secretária</option>
+                        <option value="MEDICO">Médico / Profissional</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Documento (CRM/CRO)</label>
+                    <input type="text" id="doc" class="form-control" disabled placeholder="Apenas médicos">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-2">Cadastrar Usuário</button>
+            <a href="login.html" class="btn btn-link w-100 text-decoration-none">Voltar para Login</a>
+        </form>
+    </div>
+
+    <script>
+        function verificarTipo() {
+            const tipo = document.getElementById('tipo').value;
+            const docInput = document.getElementById('doc');
+            
+            if (tipo === 'MEDICO') {
+                docInput.disabled = false;
+                docInput.required = true;
+                docInput.placeholder = "Digite o CRM";
+            } else {
+                docInput.disabled = true;
+                docInput.value = "";
+                docInput.required = false;
+                docInput.placeholder = "Apenas médicos";
+            }
+        }
+
+        async function salvarUsuario(event) {
+            event.preventDefault();
+
+            const usuario = {
+                nome: document.getElementById('nome').value,
+                email: document.getElementById('email').value,
+                senha: document.getElementById('senha').value,
+                tipo: document.getElementById('tipo').value,
+                documentoProfissional: document.getElementById('doc').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:8080/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(usuario)
+                });
+
+                if (response.ok) {
+                    alert("Usuário cadastrado com sucesso!");
+                    window.location.href = "login.html";
+                } else {
+                    alert("Erro ao cadastrar.");
+                }
+            } catch (error) {
+                alert("Erro de conexão.");
+            }
+        }
+    </script>
+</body>
+</html>

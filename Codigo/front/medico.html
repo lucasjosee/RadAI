@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Portal Médico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background: linear-gradient(to right, #0d6efd, #004399); }
+        .card-shadow { box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: none; border-radius: 12px; }
+        .status-badge { font-size: 0.9em; padding: 5px 10px; border-radius: 20px; }
+        .img-preview { max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid #ddd; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark mb-4 px-4">
+        <a class="navbar-brand fw-bold" href="#">RadAI</a>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3">Dr(a). Logado</span>
+            <a href="login.html" class="btn btn-outline-light btn-sm">Sair</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card card-shadow p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="text-primary"><i class="bi bi-list-check"></i> Consultas e Exames Pendentes</h4>
+                <button onclick="carregarConsultas()" class="btn btn-light text-primary fw-bold"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
+            </div>
+            
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Paciente (ID)</th>
+                        <th>Data</th>
+                        <th>Sintomas</th>
+                        <th>Status</th>
+                        <th class="text-end">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="listaConsultas">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalUpload" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Realizar Exame</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <input type="hidden" id="idConsultaUpload">
+                    <i class="bi bi-cloud-upload display-4 text-primary mb-3"></i>
+                    <p>Selecione a imagem do Raio-X para análise da IA.</p>
+                    <input type="file" id="arquivoImagem" class="form-control mb-3" accept="image/*" onchange="previewImagem(event)">
+                    <img id="preview" class="img-preview d-none mb-3">
+                    
+                    <div id="loading" class="d-none mt-3">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Processando imagem na nuvem...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="enviarParaIA()">Analisar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalResultado" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold text-primary">Relatório de Análise de IA</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="location.reload()"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row">
+                        <div class="col-md-6 text-center border-end">
+                            <p class="text-muted small">Imagem Analisada</p>
+                            <img id="resImg" class="img-fluid rounded shadow-sm" style="max-height: 250px;">
+                        </div>
+                        
+                        <div class="col-md-6 d-flex flex-column justify-content-center">
+                            <h5 id="resTitulo" class="fw-bold mb-3">Processando...</h5>
+                            
+                            <p class="mb-1">Nível de Confiança da IA:</p>
+                            <div class="progress mb-3" style="height: 25px;">
+                                <div id="barraConfianca" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+                            </div>
+                            
+                            <div id="boxAlerta" class="alert d-none" role="alert">
+                                </div>
+
+                            <p class="small text-muted mt-3">* Este diagnóstico é gerado por Inteligência Artificial e deve ser validado pelo profissional médico.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal" onclick="location.reload()">Confirmar e Finalizar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Carrega consultas ao abrir
+        carregarConsultas();
+
+        async function carregarConsultas() {
+            try {
+                const res = await fetch('http://localhost:8080/consultas-lista');
+                const lista = await res.json();
+                const tbody = document.getElementById('listaConsultas');
+                tbody.innerHTML = '';
+
+                lista.forEach(c => {
+                    let badge = '';
+                    if(c.status === 'FINALIZADA' || c.diagnostico_ia !== 'PENDENTE') {
+                        let cor = c.diagnostico_ia.includes('FRATURA') ? 'bg-danger' : 'bg-success';
+                        // Se tiver incerteza (pode adaptar sua lógica aqui se tiver salvo no banco)
+                        badge = `<span class="badge ${cor} status-badge">${c.diagnostico_ia || 'Concluído'}</span>`;
+                    } else {
+                        badge = `<span class="badge bg-warning text-dark status-badge">Pendente</span>`;
+                    }
+
+                    // Botão desabilitado se já foi feito
+                    let btnDisabled = (c.status === 'FINALIZADA') ? 'disabled' : '';
+                    let btnText = (c.status === 'FINALIZADA') ? 'Laudo Pronto' : 'Realizar Exame';
+                    let btnClass = (c.status === 'FINALIZADA') ? 'btn-secondary' : 'btn-primary';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>#${c.id}</td>
+                            <td>${c.paciente_id}</td>
+                            <td>${c.data_hora}</td>
+                            <td>${c.sintomas}</td>
+                            <td>${badge}</td>
+                            <td class="text-end">
+                                <button onclick="abrirUpload(${c.id})" class="btn ${btnClass} btn-sm" ${btnDisabled}>
+                                    ${btnText}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        function abrirUpload(id) {
+            document.getElementById('idConsultaUpload').value = id;
+            document.getElementById('arquivoImagem').value = '';
+            document.getElementById('preview').classList.add('d-none');
+            new bootstrap.Modal(document.getElementById('modalUpload')).show();
+        }
+
+        function previewImagem(event) {
+            const output = document.getElementById('preview');
+            output.src = URL.createObjectURL(event.target.files[0]);
+            output.classList.remove('d-none');
+        }
+
+        async function enviarParaIA() {
+            const id = document.getElementById('idConsultaUpload').value;
+            const fileInput = document.getElementById('arquivoImagem');
+            
+            if(!fileInput.files[0]) return alert("Selecione uma imagem!");
+
+            // Visual de carregamento
+            document.getElementById('loading').classList.remove('d-none');
+            
+            const formData = new FormData();
+            formData.append("consultaId", id);
+            formData.append("imagem", fileInput.files[0]);
+
+            try {
+                const res = await fetch('http://localhost:8080/upload-raiox', { method: 'POST', body: formData });
+                const resultado = await res.json();
+
+                // Esconde modal de upload e abre o de Resultado
+                bootstrap.Modal.getInstance(document.getElementById('modalUpload')).hide();
+                document.getElementById('loading').classList.add('d-none');
+                mostrarResultadoBonito(fileInput.files[0], resultado);
+
+            } catch(e) {
+                alert("Erro: " + e);
+                document.getElementById('loading').classList.add('d-none');
+            }
+        }
+
+        function mostrarResultadoBonito(arquivoImagem, resultado) {
+            // Configura a imagem no modal
+            document.getElementById('resImg').src = URL.createObjectURL(arquivoImagem);
+            
+            const titulo = document.getElementById('resTitulo');
+            const barra = document.getElementById('barraConfianca');
+            const box = document.getElementById('boxAlerta');
+            
+            // Porcentagem formatada
+            let porcentagem = (resultado.confianca * 100).toFixed(1) + "%";
+            barra.style.width = porcentagem;
+            barra.innerText = porcentagem;
+
+            box.classList.add('d-none'); // Reseta alerta
+
+            if(resultado.precisaRevisao) {
+                // Caso INCERTO
+                titulo.innerText = "Análise Inconclusiva";
+                titulo.className = "fw-bold mb-3 text-warning";
+                barra.className = "progress-bar bg-warning progress-bar-striped progress-bar-animated";
+                
+                box.innerHTML = `<strong>Atenção Médica Requerida:</strong><br>A IA detectou uma probabilidade conflitante. A margem de certeza é baixa. Por favor, analise a imagem manualmente.`;
+                box.className = "alert alert-warning mt-3";
+                box.classList.remove('d-none');
+            } 
+            else if(resultado.diagnostico.includes("FRATURA")) {
+                // Caso FRATURA
+                titulo.innerText = "Fratura Detectada";
+                titulo.className = "fw-bold mb-3 text-danger";
+                barra.className = "progress-bar bg-danger";
+            } 
+            else {
+                // Caso NORMAL
+                titulo.innerText = "Exame Normal";
+                titulo.className = "fw-bold mb-3 text-success";
+                barra.className = "progress-bar bg-success";
+            }
+
+            // Abre o modal bonito
+            new bootstrap.Modal(document.getElementById('modalResultado')).show();
+        }
+    </script>
+</body>
+</html>
